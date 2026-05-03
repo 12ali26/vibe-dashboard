@@ -11,9 +11,12 @@ type LoadState =
   | { status: "loaded"; data: DashboardResponse }
   | { status: "error"; message: string };
 
+type ActiveView = "overview" | "projects" | "system";
+
 export function DashboardPage() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeView, setActiveView] = useState<ActiveView>("overview");
   const isRequestActive = useRef(false);
 
   const loadDashboard = useCallback((showLoading: boolean) => {
@@ -63,6 +66,12 @@ export function DashboardPage() {
     return <ErrorState message={state.message} />;
   }
 
+  const projectCount = state.data.projects.length;
+  const gitRepoCount = state.data.projects.filter((project) => project.hasGit).length;
+  const dirtyRepoCount = state.data.projects.filter((project) => project.git?.hasChanges).length;
+  const nodeProjectCount = state.data.projects.filter((project) => project.type === "node").length;
+  const pythonProjectCount = state.data.projects.filter((project) => project.type === "python").length;
+
   return (
     <main className="app-shell">
       <header className="page-header">
@@ -78,10 +87,52 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <section className="dashboard-grid" aria-label="Dashboard overview">
-        <SystemPanel system={state.data.system} />
+      <nav className="app-nav" aria-label="Dashboard navigation">
+        <button className={activeView === "overview" ? "active" : ""} type="button" onClick={() => setActiveView("overview")}>
+          Overview
+        </button>
+        <button className={activeView === "projects" ? "active" : ""} type="button" onClick={() => setActiveView("projects")}>
+          Projects
+        </button>
+        <button className={activeView === "system" ? "active" : ""} type="button" onClick={() => setActiveView("system")}>
+          System
+        </button>
+      </nav>
+
+      {activeView === "overview" ? (
+        <>
+          <section className="summary-grid" aria-label="Workspace summary">
+            <article className="summary-card">
+              <span>Projects</span>
+              <strong>{projectCount}</strong>
+            </article>
+            <article className="summary-card">
+              <span>Git repos</span>
+              <strong>{gitRepoCount}</strong>
+            </article>
+            <article className="summary-card">
+              <span>Dirty repos</span>
+              <strong>{dirtyRepoCount}</strong>
+            </article>
+            <article className="summary-card">
+              <span>Node / Python</span>
+              <strong>
+                {nodeProjectCount} / {pythonProjectCount}
+              </strong>
+            </article>
+          </section>
+          <section className="dashboard-grid" aria-label="Dashboard overview">
+            <SystemPanel system={state.data.system} />
+            <ProjectList projectGroups={state.data.projectGroups} updatedAt={state.data.updatedAt} />
+          </section>
+        </>
+      ) : null}
+
+      {activeView === "projects" ? (
         <ProjectList projectGroups={state.data.projectGroups} updatedAt={state.data.updatedAt} />
-      </section>
+      ) : null}
+
+      {activeView === "system" ? <SystemPanel system={state.data.system} /> : null}
     </main>
   );
 }
