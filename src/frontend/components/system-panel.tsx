@@ -5,6 +5,10 @@ type SystemPanelProps = {
 };
 
 function formatBytes(bytes: number): string {
+  if (bytes <= 0) {
+    return "Unknown";
+  }
+
   const gibibytes = bytes / 1024 / 1024 / 1024;
 
   return `${gibibytes.toFixed(1)} GB`;
@@ -18,8 +22,6 @@ function formatUptime(seconds: number): string {
 }
 
 export function SystemPanel({ system }: SystemPanelProps) {
-  const usedMemory = system.memory.totalBytes - system.memory.freeBytes;
-
   return (
     <section className="panel">
       <div className="panel-header">
@@ -28,21 +30,32 @@ export function SystemPanel({ system }: SystemPanelProps) {
       </div>
 
       <dl className="stat-grid">
-        <div>
-          <dt>CPU cores</dt>
-          <dd>{system.cpuCount}</dd>
+        <div className="stat-card">
+          <dt>CPU usage</dt>
+          <dd>{system.cpuUsagePercent}%</dd>
+          <span>{system.cpuCount} cores</span>
+          <meter min="0" max="100" value={system.cpuUsagePercent} />
         </div>
-        <div>
-          <dt>Memory used</dt>
-          <dd>{formatBytes(usedMemory)}</dd>
+        <div className="stat-card">
+          <dt>Memory</dt>
+          <dd>{system.memory.usagePercent}%</dd>
+          <span>
+            {formatBytes(system.memory.usedBytes)} / {formatBytes(system.memory.totalBytes)}
+          </span>
+          <meter min="0" max="100" value={system.memory.usagePercent} />
         </div>
-        <div>
-          <dt>Memory free</dt>
-          <dd>{formatBytes(system.memory.freeBytes)}</dd>
+        <div className="stat-card">
+          <dt>Disk</dt>
+          <dd>{system.disk.usagePercent}%</dd>
+          <span>
+            {formatBytes(system.disk.usedBytes)} / {formatBytes(system.disk.totalBytes)}
+          </span>
+          <meter min="0" max="100" value={system.disk.usagePercent} />
         </div>
-        <div>
+        <div className="stat-card">
           <dt>Uptime</dt>
           <dd>{formatUptime(system.uptimeSeconds)}</dd>
+          <span>{system.disk.path}</span>
         </div>
       </dl>
     </section>

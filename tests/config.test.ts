@@ -1,6 +1,6 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPort, getProjectsRoot } from "../src/backend/config";
+import { getPort, getProjectsRoot, getWorkspaceRoots } from "../src/backend/config";
 
 describe("backend config", () => {
   afterEach(() => {
@@ -11,7 +11,7 @@ describe("backend config", () => {
     expect(getPort()).toBe(3000);
   });
 
-  it("keeps the projects root inside the allowed directory", () => {
+  it("keeps the default projects root inside the allowed directory", () => {
     const projectPath = path.join("/home/ubuntu/projects", "example");
 
     vi.stubEnv("PROJECTS_ROOT", projectPath);
@@ -19,9 +19,33 @@ describe("backend config", () => {
     expect(getProjectsRoot()).toBe(projectPath);
   });
 
-  it("rejects project roots outside /home/ubuntu/projects", () => {
-    vi.stubEnv("PROJECTS_ROOT", "/tmp");
+  it("allows explicit workspace roots inside /home/ubuntu", () => {
+    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/projects,/home/ubuntu/apps");
 
-    expect(() => getProjectsRoot()).toThrow("PROJECTS_ROOT must be inside /home/ubuntu/projects");
+    expect(getWorkspaceRoots()).toEqual(["/home/ubuntu/projects", "/home/ubuntu/apps"]);
+  });
+
+  it("deduplicates workspace roots", () => {
+    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/projects,/home/ubuntu/projects");
+
+    expect(getWorkspaceRoots()).toEqual(["/home/ubuntu/projects"]);
+  });
+
+  it("rejects workspace roots outside /home/ubuntu", () => {
+    vi.stubEnv("WORKSPACE_ROOTS", "/tmp");
+
+    expect(() => getWorkspaceRoots()).toThrow("Workspace root is not allowed: /tmp");
+  });
+
+  it("rejects sensitive workspace roots", () => {
+    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/.ssh");
+
+    expect(() => getWorkspaceRoots()).toThrow("Workspace root is not allowed: /home/ubuntu/.ssh");
+  });
+
+  it("rejects subdirectories of sensitive workspace roots", () => {
+    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/.config/code-server");
+
+    expect(() => getWorkspaceRoots()).toThrow("Workspace root is not allowed: /home/ubuntu/.config/code-server");
   });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DashboardResponse } from "../../shared/types";
 import { getDashboard } from "../api/client";
 import { ErrorState } from "../components/error-state";
@@ -14,8 +14,15 @@ type LoadState =
 export function DashboardPage() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isRequestActive = useRef(false);
 
   const loadDashboard = useCallback((showLoading: boolean) => {
+    if (isRequestActive.current) {
+      return Promise.resolve();
+    }
+
+    isRequestActive.current = true;
+
     if (showLoading) {
       setState({ status: "loading" });
     } else {
@@ -31,6 +38,7 @@ export function DashboardPage() {
         setState({ status: "error", message });
       })
       .finally(() => {
+        isRequestActive.current = false;
         setIsRefreshing(false);
       });
   }, []);
@@ -63,8 +71,8 @@ export function DashboardPage() {
           <h1>Vibe Dashboard</h1>
         </div>
         <div className="header-actions">
-          <p className="root-path">{state.data.projectsRoot}</p>
-          <button className="refresh-button" type="button" onClick={() => void loadDashboard(false)}>
+          <p className="root-path">{state.data.workspaceRoots.join(", ")}</p>
+          <button className="refresh-button" type="button" onClick={() => void loadDashboard(false)} disabled={isRefreshing}>
             {isRefreshing ? "Refreshing" : "Refresh"}
           </button>
         </div>
@@ -72,7 +80,7 @@ export function DashboardPage() {
 
       <section className="dashboard-grid" aria-label="Dashboard overview">
         <SystemPanel system={state.data.system} />
-        <ProjectList projects={state.data.projects} updatedAt={state.data.updatedAt} />
+        <ProjectList projectGroups={state.data.projectGroups} updatedAt={state.data.updatedAt} />
       </section>
     </main>
   );
