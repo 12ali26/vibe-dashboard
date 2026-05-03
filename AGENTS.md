@@ -45,7 +45,10 @@ Common examples for a JavaScript/TypeScript dashboard project:
 
 ```bash
 npm install      # install dependencies
-npm run dev      # start the local development server
+
+
+
+
 npm test         # run the test suite
 npm run build    # create a production build
 npm run lint     # run static analysis
