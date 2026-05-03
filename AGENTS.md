@@ -1,5 +1,29 @@
 # Repository Guidelines
+## Goal
 
+Build a web-based control panel for my cloud development environment.
+
+This dashboard will run on my Ubuntu server (where code-server is installed) and act as a central interface to manage my coding workflow.
+
+It should allow me to:
+
+- View and manage project folders inside /home/ubuntu/projects
+- Create, delete, and open projects
+- See Git status for each project
+- Run and monitor development servers (npm run dev, python apps, etc.)
+- View system information (CPU, RAM, disk usage)
+- Eventually manage files and basic terminal commands
+
+This dashboard replaces the need to manually use the terminal for common tasks and acts as a lightweight alternative to platforms like GitHub Codespaces or Coder.
+
+Start simple, then expand features incrementally.
+## Constraints
+
+- The dashboard runs locally on the same server as code-server
+- It must NOT access files outside /home/ubuntu/projects unless explicitly allowed
+- It should use simple APIs (no overengineering)
+- Prefer minimal dependencies
+- Keep everything beginner-friendly and easy to run
 ## Project Structure & Module Organization
 
 This repository is currently an empty project shell. Add application code under `src/`, tests under `tests/` or colocated as `*.test.*`, and static assets under `assets/` or `public/` depending on the framework selected. Keep top-level configuration files, such as package manifests, formatter settings, and CI definitions, at the repository root.
