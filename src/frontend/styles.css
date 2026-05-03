@@ -61,12 +61,33 @@ h1 {
 
 .root-path {
   max-width: 520px;
-  margin-bottom: 3px;
+  margin-bottom: 0;
   overflow-wrap: anywhere;
   color: #60706b;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.9rem;
   text-align: right;
+}
+
+.header-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.refresh-button {
+  min-width: 92px;
+  border: 1px solid #b8c5be;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #172026;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.refresh-button:hover {
+  background: #eef3ef;
 }
 
 .dashboard-grid {
@@ -140,7 +161,7 @@ h1 {
 
 .project-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
@@ -164,8 +185,36 @@ h1 {
   font-size: 0.82rem;
 }
 
-.status-pill {
+.project-main {
+  min-width: 0;
+}
+
+.project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  color: #60706b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.project-meta span {
+  border: 1px solid #d8ded8;
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: #f8faf8;
+}
+
+.project-badges {
+  display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.status-pill {
   min-width: 62px;
   border: 1px solid #d1d8d1;
   border-radius: 999px;
@@ -180,6 +229,12 @@ h1 {
   border-color: #8fc29a;
   color: #1f6b38;
   background: #edf8ef;
+}
+
+.status-warn {
+  border-color: #deb76e;
+  color: #78520b;
+  background: #fff8e8;
 }
 
 .empty-state {
@@ -216,6 +271,11 @@ h1 {
   .project-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .header-actions {
+    justify-items: start;
+    width: 100%;
   }
 
   .root-path {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DashboardResponse } from "../../shared/types";
 import { getDashboard } from "../api/client";
 import { ErrorState } from "../components/error-state";
@@ -13,27 +13,39 @@ type LoadState =
 
 export function DashboardPage() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadDashboard = useCallback((showLoading: boolean) => {
+    if (showLoading) {
+      setState({ status: "loading" });
+    } else {
+      setIsRefreshing(true);
+    }
 
-    getDashboard()
+    return getDashboard()
       .then((data) => {
-        if (isMounted) {
-          setState({ status: "loaded", data });
-        }
+        setState({ status: "loaded", data });
       })
       .catch((error: unknown) => {
-        if (isMounted) {
-          const message = error instanceof Error ? error.message : "Unable to load dashboard data.";
-          setState({ status: "error", message });
-        }
+        const message = error instanceof Error ? error.message : "Unable to load dashboard data.";
+        setState({ status: "error", message });
+      })
+      .finally(() => {
+        setIsRefreshing(false);
       });
+  }, []);
+
+  useEffect(() => {
+    void loadDashboard(true);
+
+    const refreshInterval = window.setInterval(() => {
+      void loadDashboard(false);
+    }, 10000);
 
     return () => {
-      isMounted = false;
+      window.clearInterval(refreshInterval);
     };
-  }, []);
+  }, [loadDashboard]);
 
   if (state.status === "loading") {
     return <LoadingState />;
@@ -50,12 +62,17 @@ export function DashboardPage() {
           <p className="eyebrow">Local control panel</p>
           <h1>Vibe Dashboard</h1>
         </div>
-        <p className="root-path">{state.data.projectsRoot}</p>
+        <div className="header-actions">
+          <p className="root-path">{state.data.projectsRoot}</p>
+          <button className="refresh-button" type="button" onClick={() => void loadDashboard(false)}>
+            {isRefreshing ? "Refreshing" : "Refresh"}
+          </button>
+        </div>
       </header>
 
       <section className="dashboard-grid" aria-label="Dashboard overview">
         <SystemPanel system={state.data.system} />
-        <ProjectList projects={state.data.projects} />
+        <ProjectList projects={state.data.projects} updatedAt={state.data.updatedAt} />
       </section>
     </main>
   );

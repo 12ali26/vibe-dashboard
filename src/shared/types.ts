@@ -6,7 +6,13 @@ export type HealthResponse = {
 export type ProjectSummary = {
   name: string;
   path: string;
+  type: "node" | "python" | "web" | "unknown";
   hasGit: boolean;
+  git?: {
+    branch: string;
+    hasChanges: boolean;
+    changedFiles: number;
+  };
 };
 
 export type SystemSummary = {
@@ -23,4 +29,5 @@ export type DashboardResponse = {
   projectsRoot: string;
   projects: ProjectSummary[];
   system: SystemSummary;
+  updatedAt: string;
 };
