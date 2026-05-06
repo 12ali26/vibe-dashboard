@@ -1,44 +1,46 @@
 # VibeIDE
 
-A self-hostable browser IDE package for an Ubuntu server. It includes:
+A self-hostable dashboard for managing a code-server workspace.
 
-- VibeIDE Dashboard on port `3000`
-- code-server on host port `8443`
-- one shared workspace folder: `./workspaces`
+VibeIDE supports two Docker modes:
 
-The dashboard manages projects, file browsing, previews, system status, and safe dev-server controls. code-server is the full IDE for editing.
+- Existing code-server mode: run only the dashboard and connect it to a code-server already running on the host.
+- Bundled IDE mode: run both the dashboard and a code-server container on a fresh server.
 
 ## Features
 
-- List, create, and delete project folders in the shared workspace.
+- List, create, and delete project folders in the configured workspace.
 - Browse project files and folders in the dashboard.
 - Preview small text files without editing them.
 - Open any project directly in code-server.
 - Start, stop, and monitor `npm run dev` for Node projects.
 - Show CPU, memory, disk, uptime, and platform details.
-- Run dashboard and code-server together with Docker Compose.
 
-## Quick Install
+## Mode 1: Existing code-server
 
-Install Docker and Docker Compose on your server, then run:
+Use this when code-server is already running on the server, for example on port `8080`.
+
+This is the right mode for the current EC2 development server.
 
 ```bash
-git clone <your-repo-url> vibeide
-cd vibeide
 cp .env.example .env
 ```
 
-Edit `.env` and set a real code-server password:
+Set these values in `.env`:
 
 ```bash
-CODE_SERVER_PASSWORD=replace-this-password
+DASHBOARD_PORT=3000
+HOST_WORKSPACES_DIR=/home/ubuntu/projects
+WORKSPACES_DIR=/home/ubuntu/projects
+CODE_SERVER_PORT=8080
+CODE_SERVER_URL=
 ```
 
-Start the stack:
+Start only the dashboard:
 
 ```bash
 docker compose build
-docker compose up -d
+docker compose up -d dashboard
 ```
 
 Open:
@@ -47,76 +49,98 @@ Open:
 http://your-server-ip:3000
 ```
 
-The dashboard `Open IDE` and per-project `Open in IDE` buttons point to code-server on:
+The dashboard opens projects in your existing code-server at:
 
 ```text
-http://your-server-ip:8443
+http://your-server-ip:8080
 ```
 
-Use the password from `CODE_SERVER_PASSWORD` when code-server asks you to sign in.
+## Mode 2: Bundled IDE
 
-## Configuration
+Use this on a fresh server where no code-server is already running.
 
-`.env.example` contains the supported settings:
+This starts:
+
+- dashboard on port `3000`
+- code-server on port `8080`
+- shared workspace folder at `./workspaces`
+- code-server config at `./config/code-server`
+
+Set these values in `.env`:
 
 ```bash
 DASHBOARD_PORT=3000
-CODE_SERVER_PORT=8443
-CODE_SERVER_PASSWORD=change-me
+HOST_WORKSPACES_DIR=./workspaces
+WORKSPACES_DIR=/workspaces
+CODE_SERVER_PORT=8080
+BUNDLED_CODE_SERVER_PORT=8080
+CODE_SERVER_PASSWORD=replace-this-password
 CODE_SERVER_URL=
-WORKSPACES_DIR=/home/ubuntu/projects
 ```
 
-If your code-server URL is behind a proxy or custom domain, set:
+Start the full stack:
+
+```bash
+docker compose build
+docker compose --profile bundled-ide up -d
+```
+
+Open:
+
+```text
+http://your-server-ip:3000
+http://your-server-ip:8080
+```
+
+Use `CODE_SERVER_PASSWORD` to sign in to the bundled code-server.
+
+## Docker Commands
+
+Existing code-server mode:
+
+```bash
+docker compose build
+docker compose up -d dashboard
+docker compose logs
+docker compose down
+```
+
+Bundled IDE mode:
+
+```bash
+docker compose build
+docker compose --profile bundled-ide up -d
+docker compose logs
+docker compose down
+```
+
+`docker compose down` stops containers. It does not delete local folders like `./workspaces` or `./config/code-server`.
+
+## Configuration
+
+`.env.example` contains:
+
+```bash
+DASHBOARD_PORT=3000
+HOST_WORKSPACES_DIR=/home/ubuntu/projects
+WORKSPACES_DIR=/home/ubuntu/projects
+CODE_SERVER_PORT=8080
+CODE_SERVER_URL=
+BUNDLED_CODE_SERVER_PORT=8080
+CODE_SERVER_PASSWORD=change-me
+```
+
+If code-server is behind a domain or proxy, set the full URL:
 
 ```bash
 CODE_SERVER_URL=https://ide.example.com
 ```
 
-If `CODE_SERVER_URL` is empty, the dashboard uses the browser's current hostname with `CODE_SERVER_PORT`.
-
-## Shared Workspace
-
-Both containers mount the same local folder:
-
-```text
-./workspaces:/workspaces
-```
-
-That means:
-
-- Projects created in the dashboard appear in code-server.
-- Files created in code-server appear in the dashboard.
-- `Open in IDE` works because both services use the same path.
-
-code-server config is persisted locally at:
-
-```text
-./config/code-server
-```
-
-Inside Docker, the dashboard reads only:
-
-```text
-WORKSPACES_DIR=/workspaces
-```
-
-## Docker Commands
-
-```bash
-docker compose build       # build the dashboard image
-docker compose up -d       # start dashboard + code-server
-docker compose logs        # view recent logs
-docker compose logs -f     # follow logs
-docker compose ps          # view container status
-docker compose down        # stop containers
-```
-
-`docker compose down` does not delete `./workspaces` or `./config/code-server`.
+When `CODE_SERVER_URL` is empty, the dashboard uses the browser hostname with `CODE_SERVER_PORT`.
 
 ## Local Development
 
-For working on the dashboard itself without Docker:
+For working on the dashboard without Docker:
 
 ```bash
 npm install
@@ -129,7 +153,7 @@ Open:
 http://localhost:3000
 ```
 
-Local non-Docker development defaults to `/home/ubuntu/projects`. Override it when needed:
+Local development defaults to `/home/ubuntu/projects`. Override it when needed:
 
 ```bash
 export WORKSPACES_DIR=/path/to/projects
@@ -148,9 +172,7 @@ npm run lint      # run ESLint
 
 ## Safety
 
-The dashboard only uses its configured workspace root. In Docker that is `/workspaces`, backed by `./workspaces` on the host. In local development the default remains `/home/ubuntu/projects`.
-
-Project names and file paths are validated before filesystem operations, and delete requests remove only direct child folders of the workspace root.
+The dashboard only uses its configured workspace root. Project names and file paths are validated before filesystem operations, and delete requests remove only direct child folders of the workspace root.
 
 File previews are read-only, limited to small text files, and skip binary files.
 
@@ -158,9 +180,14 @@ Dev server controls are intentionally narrow: the dashboard only starts `npm run
 
 ## AWS Ports
 
-Open these inbound ports in your AWS security group:
+Existing code-server mode:
 
 - `3000/tcp` for the VibeIDE dashboard
-- `8443/tcp` for code-server
+- `8080/tcp` for your existing code-server
+
+Bundled IDE mode:
+
+- `3000/tcp` for the VibeIDE dashboard
+- `8080/tcp` for bundled code-server
 
 Keep SSH on `22/tcp` open only to your own IP if you still need server access.
