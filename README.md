@@ -10,6 +10,7 @@ The dashboard runs on the same Ubuntu server as code-server and manages project 
 - Create a new project folder.
 - Delete a project folder after browser confirmation.
 - Browse a project's top-level files and folders in the dashboard.
+- Preview text files in the dashboard without editing them.
 - Show CPU, memory, disk, uptime, and platform details.
 - Open code-server with an `Open IDE` button.
 - Open a specific project in code-server from the project row.
@@ -72,4 +73,4 @@ npm run lint      # run ESLint
 
 ## Safety
 
-This MVP only uses `/home/ubuntu/projects` as its project root. Project names are validated before create or delete operations, and delete requests remove only direct child folders of `/home/ubuntu/projects`.
+This MVP only uses `/home/ubuntu/projects` as its project root. Project names and file paths are validated before filesystem operations, and delete requests remove only direct child folders of `/home/ubuntu/projects`. File previews are read-only, limited to small text files, and skip binary files.

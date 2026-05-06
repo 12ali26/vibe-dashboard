@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createProject, deleteProject, getDashboard, listProjectFiles } from "../services/dashboard-service";
+import { createProject, deleteProject, getDashboard, getProjectFileContent, listProjectFiles } from "../services/dashboard-service";
 
 export const dashboardRouter = Router();
 
@@ -35,6 +35,21 @@ dashboardRouter.get("/projects/:name/files", async (request, response, next) => 
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       response.status(404).json({ error: "Project folder was not found." });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+dashboardRouter.get("/projects/:name/file", async (request, response, next) => {
+  try {
+    const relativePath = typeof request.query.path === "string" ? request.query.path : "";
+
+    response.json(await getProjectFileContent(request.params.name, relativePath));
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      response.status(404).json({ error: "File was not found." });
       return;
     }
 

@@ -33,6 +33,16 @@ export type ProjectFilesResponse = {
   entries: ProjectFileEntry[];
 };
 
+export type ProjectFileContentResponse = {
+  projectName: string;
+  projectPath: string;
+  filePath: string;
+  name: string;
+  sizeBytes: number;
+  updatedAt: string;
+  content: string;
+};
+
 export type SystemSummary = {
   platform: string;
   uptimeSeconds: number;

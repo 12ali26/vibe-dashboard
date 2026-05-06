@@ -3,11 +3,19 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { DashboardResponse, ProjectFileEntry, ProjectFilesResponse, ProjectSummary, SystemSummary } from "../../shared/types";
+import type {
+  DashboardResponse,
+  ProjectFileContentResponse,
+  ProjectFileEntry,
+  ProjectFilesResponse,
+  ProjectSummary,
+  SystemSummary
+} from "../../shared/types";
 import { getCodeServerUrl, getProjectsRoot } from "../config";
 
 const execFileAsync = promisify(execFile);
 const bytesPerKilobyte = 1024;
+const maxPreviewFileBytes = 256 * 1024;
 const ignoredDirectoryNames = new Set([
   ".cache",
   ".codex",
@@ -274,6 +282,37 @@ export async function listProjectFiles(projectName: string, relativePath: string
     currentPath,
     parentPath: parentPath === "." ? "" : parentPath,
     entries: fileEntries.filter((entry): entry is ProjectFileEntry => entry !== null)
+  };
+}
+
+export async function getProjectFileContent(projectName: string, relativePath: string): Promise<ProjectFileContentResponse> {
+  const safeProjectName = assertSafeProjectName(projectName);
+  const projectPath = getProjectPath(safeProjectName);
+  const filePath = getProjectChildPath(projectPath, relativePath);
+  const stats = await fs.lstat(filePath);
+
+  if (!stats.isFile() || stats.isSymbolicLink()) {
+    throw new Error("Only regular files can be previewed.");
+  }
+
+  if (stats.size > maxPreviewFileBytes) {
+    throw new Error("File is too large to preview.");
+  }
+
+  const buffer = await fs.readFile(filePath);
+
+  if (buffer.includes(0)) {
+    throw new Error("Binary files cannot be previewed.");
+  }
+
+  return {
+    projectName: safeProjectName,
+    projectPath,
+    filePath: toRelativeProjectPath(projectPath, filePath),
+    name: path.basename(filePath),
+    sizeBytes: stats.size,
+    updatedAt: stats.mtime.toISOString(),
+    content: buffer.toString("utf8")
   };
 }
 

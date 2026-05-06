@@ -1,4 +1,10 @@
-import type { DashboardResponse, HealthResponse, ProjectFilesResponse, ProjectSummary } from "../../shared/types";
+import type {
+  DashboardResponse,
+  HealthResponse,
+  ProjectFileContentResponse,
+  ProjectFilesResponse,
+  ProjectSummary
+} from "../../shared/types";
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -62,6 +68,12 @@ export function getProjectFiles(projectName: string, relativePath = ""): Promise
   const query = params.toString();
 
   return getJson<ProjectFilesResponse>(`api/projects/${encodeURIComponent(projectName)}/files${query ? `?${query}` : ""}`);
+}
+
+export function getProjectFileContent(projectName: string, relativePath: string): Promise<ProjectFileContentResponse> {
+  const params = new URLSearchParams({ path: relativePath });
+
+  return getJson<ProjectFileContentResponse>(`api/projects/${encodeURIComponent(projectName)}/file?${params.toString()}`);
 }
 
 export function createProject(name: string): Promise<ProjectSummary> {

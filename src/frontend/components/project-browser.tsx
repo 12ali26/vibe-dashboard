@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { ProjectFilesResponse, ProjectSummary } from "../../shared/types";
-import { getProjectFiles } from "../api/client";
+import type { ProjectFileContentResponse, ProjectFilesResponse, ProjectSummary } from "../../shared/types";
+import { getProjectFileContent, getProjectFiles } from "../api/client";
 
 type ProjectBrowserProps = {
   codeServerUrl: string;
@@ -57,11 +57,18 @@ function getBreadcrumbs(currentPath: string): Array<{ label: string; path: strin
 
 export function ProjectBrowser({ codeServerUrl, project, onBack }: ProjectBrowserProps) {
   const [currentPath, setCurrentPath] = useState("");
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [state, setState] = useState<
     | { status: "loading" }
     | { status: "loaded"; data: ProjectFilesResponse }
     | { status: "error"; message: string }
   >({ status: "loading" });
+  const [fileState, setFileState] = useState<
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "loaded"; data: ProjectFileContentResponse }
+    | { status: "error"; message: string }
+  >({ status: "idle" });
   const projectIdeUrl = getProjectIdeUrl(codeServerUrl, project.path);
   const breadcrumbs = getBreadcrumbs(currentPath);
 
@@ -87,6 +94,38 @@ export function ProjectBrowser({ codeServerUrl, project, onBack }: ProjectBrowse
     };
   }, [currentPath, project.name]);
 
+  useEffect(() => {
+    if (!selectedFilePath) {
+      setFileState({ status: "idle" });
+      return;
+    }
+
+    let isActive = true;
+
+    setFileState({ status: "loading" });
+
+    getProjectFileContent(project.name, selectedFilePath)
+      .then((data) => {
+        if (isActive) {
+          setFileState({ status: "loaded", data });
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setFileState({ status: "error", message: error instanceof Error ? error.message : "Unable to load file preview." });
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [project.name, selectedFilePath]);
+
+  function openFolder(path: string): void {
+    setSelectedFilePath(null);
+    setCurrentPath(path);
+  }
+
   return (
     <section className="panel project-browser">
       <div className="browser-header">
@@ -96,13 +135,13 @@ export function ProjectBrowser({ codeServerUrl, project, onBack }: ProjectBrowse
               Projects
             </button>
             <span>/</span>
-            <button type="button" onClick={() => setCurrentPath("")}>
+            <button type="button" onClick={() => openFolder("")}>
               {project.name}
             </button>
             {breadcrumbs.map((breadcrumb) => (
               <span key={breadcrumb.path} className="breadcrumb-item">
                 <span>/</span>
-                <button type="button" onClick={() => setCurrentPath(breadcrumb.path)}>
+                <button type="button" onClick={() => openFolder(breadcrumb.path)}>
                   {breadcrumb.label}
                 </button>
               </span>
@@ -134,7 +173,7 @@ export function ProjectBrowser({ codeServerUrl, project, onBack }: ProjectBrowse
               {state.data.parentPath !== null ? (
                 <tr>
                   <td>
-                    <button className="file-link" type="button" onClick={() => setCurrentPath(state.data.parentPath ?? "")}>
+                    <button className="file-link" type="button" onClick={() => openFolder(state.data.parentPath ?? "")}>
                       Parent folder
                     </button>
                   </td>
@@ -147,11 +186,13 @@ export function ProjectBrowser({ codeServerUrl, project, onBack }: ProjectBrowse
                 <tr key={entry.path}>
                   <td>
                     {entry.type === "directory" ? (
-                      <button className="file-link" type="button" onClick={() => setCurrentPath(entry.path)}>
+                      <button className="file-link" type="button" onClick={() => openFolder(entry.path)}>
                         {entry.name}
                       </button>
                     ) : (
-                      <span>{entry.name}</span>
+                      <button className="file-link file-link-muted" type="button" onClick={() => setSelectedFilePath(entry.path)}>
+                        {entry.name}
+                      </button>
                     )}
                   </td>
                   <td>{entry.type === "directory" ? "Folder" : "File"}</td>
@@ -163,6 +204,27 @@ export function ProjectBrowser({ codeServerUrl, project, onBack }: ProjectBrowse
           </table>
           {state.data.entries.length === 0 ? <p className="empty-state">This folder is empty.</p> : null}
         </div>
+      ) : null}
+
+      {selectedFilePath ? (
+        <section className="file-preview" aria-label="File preview">
+          <div className="file-preview-header">
+            <div>
+              <span>Preview</span>
+              <h3>{selectedFilePath}</h3>
+            </div>
+            <button className="text-button" type="button" onClick={() => setSelectedFilePath(null)}>
+              Close preview
+            </button>
+          </div>
+          {fileState.status === "loading" ? <p className="empty-state">Loading preview...</p> : null}
+          {fileState.status === "error" ? <p className="form-error">{fileState.message}</p> : null}
+          {fileState.status === "loaded" ? (
+            <pre className="code-preview">
+              <code>{fileState.data.content}</code>
+            </pre>
+          ) : null}
+        </section>
       ) : null}
     </section>
   );
