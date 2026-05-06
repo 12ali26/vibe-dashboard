@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { createProject, deleteProject, getDashboard, getProjectFileContent, listProjectFiles } from "../services/dashboard-service";
+import { getDevServer, startDevServer, stopDevServer } from "../services/dev-server-service";
 
 export const dashboardRouter = Router();
 
@@ -53,6 +54,30 @@ dashboardRouter.get("/projects/:name/file", async (request, response, next) => {
       return;
     }
 
+    next(error);
+  }
+});
+
+dashboardRouter.get("/projects/:name/dev-server", (request, response, next) => {
+  try {
+    response.json(getDevServer(request.params.name));
+  } catch (error) {
+    next(error);
+  }
+});
+
+dashboardRouter.post("/projects/:name/dev-server/start", async (request, response, next) => {
+  try {
+    response.json(await startDevServer(request.params.name));
+  } catch (error) {
+    next(error);
+  }
+});
+
+dashboardRouter.post("/projects/:name/dev-server/stop", (request, response, next) => {
+  try {
+    response.json(stopDevServer(request.params.name));
+  } catch (error) {
     next(error);
   }
 });

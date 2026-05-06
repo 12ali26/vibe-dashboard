@@ -43,6 +43,17 @@ export type ProjectFileContentResponse = {
   content: string;
 };
 
+export type DevServerSummary = {
+  projectName: string;
+  command: string;
+  status: "running" | "stopped";
+  pid: number | null;
+  startedAt: string | null;
+  stoppedAt: string | null;
+  exitCode: number | null;
+  logs: string[];
+};
+
 export type SystemSummary = {
   platform: string;
   uptimeSeconds: number;

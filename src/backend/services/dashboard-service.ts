@@ -131,7 +131,7 @@ async function listProjects(projectsRoot: string): Promise<ProjectSummary[]> {
   );
 }
 
-function assertSafeProjectName(name: string): string {
+export function assertSafeProjectName(name: string): string {
   const trimmedName = name.trim();
 
   if (!trimmedName) {
@@ -153,7 +153,7 @@ function assertSafeProjectName(name: string): string {
   return trimmedName;
 }
 
-function getProjectPath(projectName: string): string {
+export function getProjectPath(projectName: string): string {
   const projectsRoot = getProjectsRoot();
   const resolvedRoot = path.resolve(projectsRoot);
   const resolvedProjectPath = path.resolve(resolvedRoot, projectName);

@@ -1,5 +1,6 @@
 import type {
   DashboardResponse,
+  DevServerSummary,
   HealthResponse,
   ProjectFileContentResponse,
   ProjectFilesResponse,
@@ -74,6 +75,22 @@ export function getProjectFileContent(projectName: string, relativePath: string)
   const params = new URLSearchParams({ path: relativePath });
 
   return getJson<ProjectFileContentResponse>(`api/projects/${encodeURIComponent(projectName)}/file?${params.toString()}`);
+}
+
+export function getDevServer(projectName: string): Promise<DevServerSummary> {
+  return getJson<DevServerSummary>(`api/projects/${encodeURIComponent(projectName)}/dev-server`);
+}
+
+export function startDevServer(projectName: string): Promise<DevServerSummary> {
+  return sendJson<DevServerSummary>(`api/projects/${encodeURIComponent(projectName)}/dev-server/start`, {
+    method: "POST"
+  });
+}
+
+export function stopDevServer(projectName: string): Promise<DevServerSummary> {
+  return sendJson<DevServerSummary>(`api/projects/${encodeURIComponent(projectName)}/dev-server/stop`, {
+    method: "POST"
+  });
 }
 
 export function createProject(name: string): Promise<ProjectSummary> {

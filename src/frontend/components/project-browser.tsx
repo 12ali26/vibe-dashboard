@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ProjectFileContentResponse, ProjectFilesResponse, ProjectSummary } from "../../shared/types";
 import { getProjectFileContent, getProjectFiles } from "../api/client";
+import { DevServerPanel } from "./dev-server-panel";
 
 type ProjectBrowserProps = {
   codeServerUrl: string;
@@ -154,6 +155,8 @@ export function ProjectBrowser({ codeServerUrl, project, onBack }: ProjectBrowse
           Open in IDE
         </a>
       </div>
+
+      <DevServerPanel project={project} />
 
       {state.status === "loading" ? <p className="empty-state">Loading files...</p> : null}
       {state.status === "error" ? <p className="form-error">{state.message}</p> : null}
