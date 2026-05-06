@@ -4,23 +4,42 @@ A self-hostable dashboard for managing a code-server workspace.
 
 VibeIDE supports two Docker modes:
 
-- Existing code-server mode: run only the dashboard and connect it to a code-server already running on the host.
-- Bundled IDE mode: run both the dashboard and a code-server container on a fresh server.
+- Fresh install mode: run dashboard + bundled code-server.
+- Existing code-server mode: run only the dashboard and connect it to code-server already running on the host.
 
-## Features
+## Fresh Install
 
-- List, create, and delete project folders in the configured workspace.
-- Browse project files and folders in the dashboard.
-- Preview small text files without editing them.
-- Open any project directly in code-server.
-- Start, stop, and monitor `npm run dev` for Node projects.
-- Show CPU, memory, disk, uptime, and platform details.
+Use this on a fresh Ubuntu server.
 
-## Mode 1: Existing code-server
+One-command install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/12ali26/vibe-dashboard/main/install.sh | bash
+```
+
+The installer will:
+
+- Install Docker Engine and Docker Compose plugin if missing.
+- Install Git if missing.
+- Clone this repo into `~/vibeide` if needed.
+- Create `./workspaces` and `./config/code-server`.
+- Create `.env` from `.env.example`.
+- Generate a code-server password.
+- Run `docker compose build`.
+- Run `docker compose --profile bundled-ide up -d`.
+
+Open:
+
+```text
+Dashboard: http://SERVER_IP:3000
+IDE:       http://SERVER_IP:8080
+```
+
+The generated code-server password is printed during install and saved in `.env`.
+
+## Existing code-server Mode
 
 Use this when code-server is already running on the server, for example on port `8080`.
-
-This is the right mode for the current EC2 development server.
 
 ```bash
 cp .env.example .env
@@ -46,29 +65,19 @@ docker compose up -d dashboard
 Open:
 
 ```text
-http://your-server-ip:3000
+Dashboard: http://SERVER_IP:3000
+IDE:       http://SERVER_IP:8080
 ```
 
-The dashboard opens projects in your existing code-server at:
+## Bundled IDE Mode
 
-```text
-http://your-server-ip:8080
-```
-
-## Mode 2: Bundled IDE
-
-Use this on a fresh server where no code-server is already running.
-
-This starts:
-
-- dashboard on port `3000`
-- code-server on port `8080`
-- shared workspace folder at `./workspaces`
-- code-server config at `./config/code-server`
+Use this when you want Docker Compose to run both dashboard and code-server.
 
 Set these values in `.env`:
 
 ```bash
+cp .env.bundled.example .env
+
 DASHBOARD_PORT=3000
 HOST_WORKSPACES_DIR=./workspaces
 WORKSPACES_DIR=/workspaces
@@ -85,21 +94,11 @@ docker compose build
 docker compose --profile bundled-ide up -d
 ```
 
-Open:
-
-```text
-http://your-server-ip:3000
-http://your-server-ip:8080
-```
-
-Use `CODE_SERVER_PASSWORD` to sign in to the bundled code-server.
-
-## Docker Commands
+## Start, Stop, Logs
 
 Existing code-server mode:
 
 ```bash
-docker compose build
 docker compose up -d dashboard
 docker compose logs
 docker compose down
@@ -108,35 +107,67 @@ docker compose down
 Bundled IDE mode:
 
 ```bash
-docker compose build
 docker compose --profile bundled-ide up -d
 docker compose logs
 docker compose down
 ```
 
-`docker compose down` stops containers. It does not delete local folders like `./workspaces` or `./config/code-server`.
-
-## Configuration
-
-`.env.example` contains:
+Check status:
 
 ```bash
-DASHBOARD_PORT=3000
-HOST_WORKSPACES_DIR=/home/ubuntu/projects
-WORKSPACES_DIR=/home/ubuntu/projects
-CODE_SERVER_PORT=8080
-CODE_SERVER_URL=
-BUNDLED_CODE_SERVER_PORT=8080
-CODE_SERVER_PASSWORD=change-me
+docker compose ps
 ```
 
-If code-server is behind a domain or proxy, set the full URL:
+Restart:
 
 ```bash
-CODE_SERVER_URL=https://ide.example.com
+docker compose restart
 ```
 
-When `CODE_SERVER_URL` is empty, the dashboard uses the browser hostname with `CODE_SERVER_PORT`.
+## Uninstall / Cleanup
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Remove generated local data for bundled mode:
+
+```bash
+rm -rf workspaces config/code-server .env
+```
+
+Remove Docker images and unused Docker cache:
+
+```bash
+docker system prune -a
+```
+
+Only run `docker system prune -a` if you are okay deleting unused Docker images on the server.
+
+## AWS Ports
+
+Fresh install / bundled IDE mode:
+
+- `3000/tcp` for the VibeIDE dashboard
+- `8080/tcp` for bundled code-server
+
+Existing code-server mode:
+
+- `3000/tcp` for the VibeIDE dashboard
+- your existing code-server port, usually `8080/tcp`
+
+Keep SSH on `22/tcp` open only to your own IP if you need server access.
+
+## Features
+
+- List, create, and delete project folders in the configured workspace.
+- Browse project files and folders in the dashboard.
+- Preview small text files without editing them.
+- Open any project directly in code-server.
+- Start, stop, and monitor `npm run dev` for Node projects.
+- Show CPU, memory, disk, uptime, and platform details.
 
 ## Local Development
 
@@ -177,17 +208,3 @@ The dashboard only uses its configured workspace root. Project names and file pa
 File previews are read-only, limited to small text files, and skip binary files.
 
 Dev server controls are intentionally narrow: the dashboard only starts `npm run dev`, only from a validated project folder, and shows recent stdout/stderr logs in the project view.
-
-## AWS Ports
-
-Existing code-server mode:
-
-- `3000/tcp` for the VibeIDE dashboard
-- `8080/tcp` for your existing code-server
-
-Bundled IDE mode:
-
-- `3000/tcp` for the VibeIDE dashboard
-- `8080/tcp` for bundled code-server
-
-Keep SSH on `22/tcp` open only to your own IP if you still need server access.
