@@ -3,6 +3,7 @@ self-hosted cloud IDE dashboard for managing code-server environments
 
 Read AGENTS.md first.
 
+
 We are turning this project into VibeIDE: a dashboard that manages a self-hosted code-server environment.
 
 Build MVP v1 only.

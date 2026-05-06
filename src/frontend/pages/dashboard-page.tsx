@@ -14,12 +14,12 @@ type LoadState =
 
 type ActiveView = "overview" | "projects" | "system";
 
-function getOpenIdeUrl(configuredUrl: string): string {
+function getOpenIdeUrl(configuredUrl: string, port: number): string {
   if (configuredUrl) {
     return configuredUrl;
   }
 
-  return `http://${window.location.hostname}:8080`;
+  return `http://${window.location.hostname}:${port}`;
 }
 
 export function DashboardPage() {
@@ -117,7 +117,7 @@ export function DashboardPage() {
   const dirtyRepoCount = state.data.projects.filter((project) => project.git?.hasChanges).length;
   const nodeProjectCount = state.data.projects.filter((project) => project.type === "node").length;
   const pythonProjectCount = state.data.projects.filter((project) => project.type === "python").length;
-  const openIdeUrl = getOpenIdeUrl(state.data.codeServerUrl);
+  const openIdeUrl = getOpenIdeUrl(state.data.codeServerUrl, state.data.codeServerPort);
 
   function selectProject(project: ProjectSummary): void {
     setSelectedProject(project);

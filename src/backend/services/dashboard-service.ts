@@ -11,7 +11,7 @@ import type {
   ProjectSummary,
   SystemSummary
 } from "../../shared/types";
-import { getCodeServerUrl, getProjectsRoot } from "../config";
+import { getCodeServerPort, getCodeServerUrl, getProjectsRoot } from "../config";
 
 const execFileAsync = promisify(execFile);
 const bytesPerKilobyte = 1024;
@@ -419,6 +419,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     projects,
     system: await getSystemSummary(projectsRoot),
     codeServerUrl: getCodeServerUrl(),
+    codeServerPort: getCodeServerPort(),
     updatedAt: new Date().toISOString()
   };
 }

@@ -1,0 +1,34 @@
+services:
+  dashboard:
+    build:
+      context: .
+    container_name: vibeide-dashboard
+    environment:
+      PORT: "3000"
+      WORKSPACES_DIR: /workspaces
+      CODE_SERVER_PORT: ${CODE_SERVER_PORT:-8443}
+      CODE_SERVER_URL: ${CODE_SERVER_URL:-}
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    volumes:
+      - ./workspaces:/workspaces
+    restart: unless-stopped
+
+  code-server:
+    image: codercom/code-server:latest
+    container_name: vibeide-code-server
+    user: "0:0"
+    environment:
+      PASSWORD: ${CODE_SERVER_PASSWORD:-change-me}
+    command:
+      - --bind-addr
+      - 0.0.0.0:8080
+      - --auth
+      - password
+      - /workspaces
+    ports:
+      - "${CODE_SERVER_PORT:-8443}:8080"
+    volumes:
+      - ./workspaces:/workspaces
+      - ./config/code-server:/root/.config/code-server
+    restart: unless-stopped

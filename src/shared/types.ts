@@ -79,5 +79,6 @@ export type DashboardResponse = {
   projects: ProjectSummary[];
   system: SystemSummary;
   codeServerUrl: string;
+  codeServerPort: number;
   updatedAt: string;
 };

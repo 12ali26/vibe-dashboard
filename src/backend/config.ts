@@ -1,3 +1,5 @@
+import path from "node:path";
+
 const defaultProjectsRoot = "/home/ubuntu/projects";
 
 export function getPort(): number {
@@ -5,7 +7,7 @@ export function getPort(): number {
 }
 
 export function getProjectsRoot(): string {
-  return defaultProjectsRoot;
+  return path.resolve(process.env.WORKSPACES_DIR?.trim() || defaultProjectsRoot);
 }
 
 export function getCodeServerUrl(): string {
@@ -16,10 +18,15 @@ export function getCodeServerUrl(): string {
   }
 
   const serverIp = process.env.SERVER_IP?.trim();
+  const codeServerPort = process.env.CODE_SERVER_PORT?.trim() || "8080";
 
   if (serverIp) {
-    return `http://${serverIp}:8080`;
+    return `http://${serverIp}:${codeServerPort}`;
   }
 
   return "";
+}
+
+export function getCodeServerPort(): number {
+  return Number.parseInt(process.env.CODE_SERVER_PORT ?? "8080", 10);
 }
