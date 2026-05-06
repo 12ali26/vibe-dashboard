@@ -17,6 +17,22 @@ export type ProjectSummary = {
   };
 };
 
+export type ProjectFileEntry = {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  sizeBytes: number | null;
+  updatedAt: string | null;
+};
+
+export type ProjectFilesResponse = {
+  projectName: string;
+  projectPath: string;
+  currentPath: string;
+  parentPath: string | null;
+  entries: ProjectFileEntry[];
+};
+
 export type SystemSummary = {
   platform: string;
   uptimeSeconds: number;
@@ -39,12 +55,8 @@ export type SystemSummary = {
 
 export type DashboardResponse = {
   projectsRoot: string;
-  workspaceRoots: string[];
-  projectGroups: Array<{
-    root: string;
-    projects: ProjectSummary[];
-  }>;
   projects: ProjectSummary[];
   system: SystemSummary;
+  codeServerUrl: string;
   updatedAt: string;
 };

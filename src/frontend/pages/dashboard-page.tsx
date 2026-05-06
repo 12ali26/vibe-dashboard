@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DashboardResponse } from "../../shared/types";
-import { getDashboard } from "../api/client";
+import type { DashboardResponse, ProjectSummary } from "../../shared/types";
+import { createProject, deleteProject, getDashboard } from "../api/client";
 import { ErrorState } from "../components/error-state";
 import { LoadingState } from "../components/loading-state";
+import { ProjectBrowser } from "../components/project-browser";
 import { ProjectList } from "../components/project-list";
 import { SystemPanel } from "../components/system-panel";
 
@@ -13,10 +14,21 @@ type LoadState =
 
 type ActiveView = "overview" | "projects" | "system";
 
+function getOpenIdeUrl(configuredUrl: string): string {
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  return `http://${window.location.hostname}:8080`;
+}
+
 export function DashboardPage() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSavingProject, setIsSavingProject] = useState(false);
+  const [projectActionError, setProjectActionError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("overview");
+  const [selectedProject, setSelectedProject] = useState<ProjectSummary | null>(null);
   const isRequestActive = useRef(false);
 
   const loadDashboard = useCallback((showLoading: boolean) => {
@@ -46,6 +58,40 @@ export function DashboardPage() {
       });
   }, []);
 
+  const handleCreateProject = useCallback(
+    async (name: string) => {
+      setIsSavingProject(true);
+      setProjectActionError(null);
+
+      try {
+        await createProject(name);
+        await loadDashboard(false);
+      } catch (error) {
+        setProjectActionError(error instanceof Error ? error.message : "Unable to create project.");
+      } finally {
+        setIsSavingProject(false);
+      }
+    },
+    [loadDashboard]
+  );
+
+  const handleDeleteProject = useCallback(
+    async (name: string) => {
+      setIsSavingProject(true);
+      setProjectActionError(null);
+
+      try {
+        await deleteProject(name);
+        await loadDashboard(false);
+      } catch (error) {
+        setProjectActionError(error instanceof Error ? error.message : "Unable to delete project.");
+      } finally {
+        setIsSavingProject(false);
+      }
+    },
+    [loadDashboard]
+  );
+
   useEffect(() => {
     void loadDashboard(true);
 
@@ -71,6 +117,12 @@ export function DashboardPage() {
   const dirtyRepoCount = state.data.projects.filter((project) => project.git?.hasChanges).length;
   const nodeProjectCount = state.data.projects.filter((project) => project.type === "node").length;
   const pythonProjectCount = state.data.projects.filter((project) => project.type === "python").length;
+  const openIdeUrl = getOpenIdeUrl(state.data.codeServerUrl);
+
+  function selectProject(project: ProjectSummary): void {
+    setSelectedProject(project);
+    setActiveView("projects");
+  }
 
   return (
     <main className="app-shell">
@@ -80,21 +132,45 @@ export function DashboardPage() {
           <h1>Vibe Dashboard</h1>
         </div>
         <div className="header-actions">
-          <p className="root-path">{state.data.workspaceRoots.join(", ")}</p>
+          <p className="root-path">{state.data.projectsRoot}</p>
           <button className="refresh-button" type="button" onClick={() => void loadDashboard(false)} disabled={isRefreshing}>
             {isRefreshing ? "Refreshing" : "Refresh"}
           </button>
+          <a className="ide-button" href={openIdeUrl} target="_blank" rel="noreferrer">
+            Open IDE
+          </a>
         </div>
       </header>
 
       <nav className="app-nav" aria-label="Dashboard navigation">
-        <button className={activeView === "overview" ? "active" : ""} type="button" onClick={() => setActiveView("overview")}>
+        <button
+          className={activeView === "overview" ? "active" : ""}
+          type="button"
+          onClick={() => {
+            setSelectedProject(null);
+            setActiveView("overview");
+          }}
+        >
           Overview
         </button>
-        <button className={activeView === "projects" ? "active" : ""} type="button" onClick={() => setActiveView("projects")}>
+        <button
+          className={activeView === "projects" ? "active" : ""}
+          type="button"
+          onClick={() => {
+            setSelectedProject(null);
+            setActiveView("projects");
+          }}
+        >
           Projects
         </button>
-        <button className={activeView === "system" ? "active" : ""} type="button" onClick={() => setActiveView("system")}>
+        <button
+          className={activeView === "system" ? "active" : ""}
+          type="button"
+          onClick={() => {
+            setSelectedProject(null);
+            setActiveView("system");
+          }}
+        >
           System
         </button>
       </nav>
@@ -123,13 +199,41 @@ export function DashboardPage() {
           </section>
           <section className="dashboard-grid" aria-label="Dashboard overview">
             <SystemPanel system={state.data.system} />
-            <ProjectList projectGroups={state.data.projectGroups} updatedAt={state.data.updatedAt} />
+            {selectedProject ? (
+              <ProjectBrowser codeServerUrl={openIdeUrl} project={selectedProject} onBack={() => setSelectedProject(null)} />
+            ) : (
+              <ProjectList
+                codeServerUrl={openIdeUrl}
+                projects={state.data.projects}
+                projectsRoot={state.data.projectsRoot}
+                updatedAt={state.data.updatedAt}
+                isSaving={isSavingProject}
+                errorMessage={projectActionError}
+                onCreateProject={handleCreateProject}
+                onDeleteProject={handleDeleteProject}
+                onSelectProject={selectProject}
+              />
+            )}
           </section>
         </>
       ) : null}
 
-      {activeView === "projects" ? (
-        <ProjectList projectGroups={state.data.projectGroups} updatedAt={state.data.updatedAt} />
+      {activeView === "projects" && selectedProject ? (
+        <ProjectBrowser codeServerUrl={openIdeUrl} project={selectedProject} onBack={() => setSelectedProject(null)} />
+      ) : null}
+
+      {activeView === "projects" && !selectedProject ? (
+        <ProjectList
+          codeServerUrl={openIdeUrl}
+          projects={state.data.projects}
+          projectsRoot={state.data.projectsRoot}
+          updatedAt={state.data.updatedAt}
+          isSaving={isSavingProject}
+          errorMessage={projectActionError}
+          onCreateProject={handleCreateProject}
+          onDeleteProject={handleDeleteProject}
+          onSelectProject={selectProject}
+        />
       ) : null}
 
       {activeView === "system" ? <SystemPanel system={state.data.system} /> : null}

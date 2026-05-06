@@ -1,73 +1,75 @@
-# Vibe Dashboard
+# VibeIDE Dashboard
 
-A small local dashboard for managing projects on an Ubuntu code-server machine.
+A small local control panel for a self-hosted code-server machine.
 
-## Features
+The dashboard runs on the same Ubuntu server as code-server and manages project folders inside `/home/ubuntu/projects`.
 
-- Lists project folders from one or more explicitly allowed workspace roots.
-- Detects Node projects, Python projects, static web folders, and Git repositories.
-- Shows read-only Git branch and clean/dirty status using safe Git status commands.
-- Shows CPU usage, memory usage, disk usage, uptime, and platform details.
-- Refreshes manually and automatically every 10 seconds without overlapping requests.
-- Provides safe copy buttons for project paths, `code-server <path>` open commands, and common dev commands.
-- Does not run arbitrary commands and only reads explicit workspace roots inside `/home/ubuntu`.
+## MVP Features
 
-## Local Development
+- List project folders in `/home/ubuntu/projects`.
+- Create a new project folder.
+- Delete a project folder after browser confirmation.
+- Browse a project's top-level files and folders in the dashboard.
+- Show CPU, memory, disk, uptime, and platform details.
+- Open code-server with an `Open IDE` button.
+- Open a specific project in code-server from the project row.
+
+## Install
 
 ```bash
 npm install
+```
+
+## Run In Development
+
+Set `SERVER_IP` to your Ubuntu server IP so the `Open IDE` button points to code-server on port `8080`.
+
+```bash
+export SERVER_IP=your-server-ip
 npm run dev
 ```
 
-The app runs at:
+Open the dashboard:
 
 ```text
-http://localhost:3000
+http://your-server-ip:3000
 ```
 
-API endpoints are available under the same host:
+If `SERVER_IP` is omitted, the browser uses the dashboard hostname with port `8080`.
 
 ```text
-http://localhost:3000/api/health
-http://localhost:3000/api/dashboard
+http://current-dashboard-hostname:8080
 ```
 
-`npm run dev` watches the frontend build and restarts the backend when backend files change. This is intentionally less fancy than Vite hot reload, but it works reliably behind code-server's port forwarding because the whole app uses one port.
-
-## Using the Dashboard
-
-Open the dashboard in the browser, then use:
-
-- `Refresh` to update project, Git, and system status immediately.
-- `Copy path` to copy a project folder path.
-- `Open command` to copy a `code-server <project-path>` command for opening the folder.
-- Suggested command buttons, such as `npm install`, `npm run dev`, or `source .venv/bin/activate`, to copy safe commands into your terminal.
-
-The dashboard intentionally suggests commands instead of executing them in V1.
-
-## Environment
-
-`.env.example` documents the supported local settings. Export values in your shell before starting the app when you need overrides.
+For custom code-server URLs, set `CODE_SERVER_URL` instead.
 
 ```bash
-export PORT=3000
-export WORKSPACE_ROOTS=/home/ubuntu/projects
+export CODE_SERVER_URL=https://your-code-server-url
 ```
 
-Use comma-separated roots to include additional safe workspace folders:
+## Production Build
 
 ```bash
-export WORKSPACE_ROOTS=/home/ubuntu/projects,/home/ubuntu/apps
+npm run build
+npm run start
 ```
 
-Workspace roots must stay inside `/home/ubuntu`. Sensitive locations such as `/home/ubuntu/.ssh`, `/home/ubuntu/.config`, `/etc`, `/var`, and `/tmp` are rejected.
+The backend serves the built frontend and API from:
+
+```text
+http://your-server-ip:3000
+```
 
 ## Scripts
 
 ```bash
-npm run dev       # start frontend and backend
+npm run dev       # build the frontend in watch mode and run the backend
 npm run build     # type-check and build the frontend
 npm run start     # run the backend and serve dist/
 npm run test      # run tests
 npm run lint      # run ESLint
 ```
+
+## Safety
+
+This MVP only uses `/home/ubuntu/projects` as its project root. Project names are validated before create or delete operations, and delete requests remove only direct child folders of `/home/ubuntu/projects`.

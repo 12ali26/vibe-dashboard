@@ -1,6 +1,6 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPort, getProjectsRoot, getWorkspaceRoots } from "../src/backend/config";
+import { getCodeServerUrl, getPort, getProjectsRoot } from "../src/backend/config";
 
 describe("backend config", () => {
   afterEach(() => {
@@ -11,41 +11,28 @@ describe("backend config", () => {
     expect(getPort()).toBe(3000);
   });
 
-  it("keeps the default projects root inside the allowed directory", () => {
+  it("uses /home/ubuntu/projects as the only projects root", () => {
     const projectPath = path.join("/home/ubuntu/projects", "example");
 
     vi.stubEnv("PROJECTS_ROOT", projectPath);
 
-    expect(getProjectsRoot()).toBe(projectPath);
+    expect(getProjectsRoot()).toBe("/home/ubuntu/projects");
   });
 
-  it("allows explicit workspace roots inside /home/ubuntu", () => {
-    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/projects,/home/ubuntu/apps");
-
-    expect(getWorkspaceRoots()).toEqual(["/home/ubuntu/projects", "/home/ubuntu/apps"]);
+  it("leaves the code-server URL empty when no override is configured", () => {
+    expect(getCodeServerUrl()).toBe("");
   });
 
-  it("deduplicates workspace roots", () => {
-    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/projects,/home/ubuntu/projects");
+  it("uses SERVER_IP for the code-server URL when provided", () => {
+    vi.stubEnv("SERVER_IP", "203.0.113.10");
 
-    expect(getWorkspaceRoots()).toEqual(["/home/ubuntu/projects"]);
+    expect(getCodeServerUrl()).toBe("http://203.0.113.10:8080");
   });
 
-  it("rejects workspace roots outside /home/ubuntu", () => {
-    vi.stubEnv("WORKSPACE_ROOTS", "/tmp");
+  it("uses CODE_SERVER_URL before SERVER_IP when provided", () => {
+    vi.stubEnv("CODE_SERVER_URL", "https://example.test/code-server");
+    vi.stubEnv("SERVER_IP", "203.0.113.10");
 
-    expect(() => getWorkspaceRoots()).toThrow("Workspace root is not allowed: /tmp");
-  });
-
-  it("rejects sensitive workspace roots", () => {
-    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/.ssh");
-
-    expect(() => getWorkspaceRoots()).toThrow("Workspace root is not allowed: /home/ubuntu/.ssh");
-  });
-
-  it("rejects subdirectories of sensitive workspace roots", () => {
-    vi.stubEnv("WORKSPACE_ROOTS", "/home/ubuntu/.config/code-server");
-
-    expect(() => getWorkspaceRoots()).toThrow("Workspace root is not allowed: /home/ubuntu/.config/code-server");
+    expect(getCodeServerUrl()).toBe("https://example.test/code-server");
   });
 });

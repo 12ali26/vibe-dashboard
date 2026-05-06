@@ -3,8 +3,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { DashboardResponse, ProjectSummary, SystemSummary } from "../../shared/types";
-import { getWorkspaceRoots } from "../config";
+import type { DashboardResponse, ProjectFileEntry, ProjectFilesResponse, ProjectSummary, SystemSummary } from "../../shared/types";
+import { getCodeServerUrl, getProjectsRoot } from "../config";
 
 const execFileAsync = promisify(execFile);
 const bytesPerKilobyte = 1024;
@@ -123,6 +123,160 @@ async function listProjects(projectsRoot: string): Promise<ProjectSummary[]> {
   );
 }
 
+function assertSafeProjectName(name: string): string {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    throw new Error("Project name is required.");
+  }
+
+  if (trimmedName.length > 80) {
+    throw new Error("Project name must be 80 characters or less.");
+  }
+
+  if (trimmedName === "." || trimmedName === ".." || trimmedName.startsWith(".")) {
+    throw new Error("Project name cannot be hidden or relative.");
+  }
+
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(trimmedName)) {
+    throw new Error("Project name can only use letters, numbers, dots, underscores, and hyphens.");
+  }
+
+  return trimmedName;
+}
+
+function getProjectPath(projectName: string): string {
+  const projectsRoot = getProjectsRoot();
+  const resolvedRoot = path.resolve(projectsRoot);
+  const resolvedProjectPath = path.resolve(resolvedRoot, projectName);
+
+  if (path.dirname(resolvedProjectPath) !== resolvedRoot) {
+    throw new Error("Project path must stay inside the projects folder.");
+  }
+
+  return resolvedProjectPath;
+}
+
+function assertSafeRelativePath(relativePath: string): string {
+  const normalizedPath = path.normalize(relativePath.trim());
+
+  if (!relativePath.trim() || normalizedPath === ".") {
+    return "";
+  }
+
+  if (path.isAbsolute(normalizedPath) || normalizedPath === ".." || normalizedPath.startsWith(`..${path.sep}`)) {
+    throw new Error("File path must stay inside the project folder.");
+  }
+
+  return normalizedPath;
+}
+
+function getProjectChildPath(projectPath: string, relativePath: string): string {
+  const safeRelativePath = assertSafeRelativePath(relativePath);
+  const resolvedProjectPath = path.resolve(projectPath);
+  const resolvedChildPath = path.resolve(resolvedProjectPath, safeRelativePath);
+
+  if (resolvedChildPath !== resolvedProjectPath && !resolvedChildPath.startsWith(`${resolvedProjectPath}${path.sep}`)) {
+    throw new Error("File path must stay inside the project folder.");
+  }
+
+  return resolvedChildPath;
+}
+
+function toRelativeProjectPath(projectPath: string, targetPath: string): string {
+  return path.relative(projectPath, targetPath);
+}
+
+async function toProjectFileEntry(projectPath: string, entryPath: string, name: string): Promise<ProjectFileEntry | null> {
+  const stats = await fs.lstat(entryPath);
+
+  if (stats.isSymbolicLink()) {
+    return null;
+  }
+
+  const isDirectory = stats.isDirectory();
+
+  if (!isDirectory && !stats.isFile()) {
+    return null;
+  }
+
+  return {
+    name,
+    path: toRelativeProjectPath(projectPath, entryPath),
+    type: isDirectory ? "directory" : "file",
+    sizeBytes: isDirectory ? null : stats.size,
+    updatedAt: stats.mtime.toISOString()
+  };
+}
+
+export async function createProject(name: string): Promise<ProjectSummary> {
+  const projectName = assertSafeProjectName(name);
+  const projectPath = getProjectPath(projectName);
+
+  await fs.mkdir(projectPath);
+
+  return {
+    name: projectName,
+    path: projectPath,
+    root: getProjectsRoot(),
+    type: "unknown",
+    devCommands: [],
+    hasGit: false
+  };
+}
+
+export async function deleteProject(name: string): Promise<void> {
+  const projectName = assertSafeProjectName(name);
+  const projectPath = getProjectPath(projectName);
+  const stats = await fs.lstat(projectPath);
+
+  if (!stats.isDirectory()) {
+    throw new Error("Only project folders can be deleted.");
+  }
+
+  await fs.rm(projectPath, {
+    recursive: true,
+    force: false
+  });
+}
+
+export async function listProjectFiles(projectName: string, relativePath: string): Promise<ProjectFilesResponse> {
+  const safeProjectName = assertSafeProjectName(projectName);
+  const projectPath = getProjectPath(safeProjectName);
+  const targetPath = getProjectChildPath(projectPath, relativePath);
+  const targetStats = await fs.lstat(targetPath);
+
+  if (!targetStats.isDirectory()) {
+    throw new Error("Only folders can be browsed.");
+  }
+
+  const entries = await fs.readdir(targetPath, { withFileTypes: true });
+  const visibleEntries = entries
+    .filter((entry) => !entry.name.startsWith("."))
+    .filter((entry) => !ignoredDirectoryNames.has(entry.name))
+    .sort((a, b) => {
+      if (a.isDirectory() !== b.isDirectory()) {
+        return a.isDirectory() ? -1 : 1;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+
+  const fileEntries = await Promise.all(
+    visibleEntries.map((entry) => toProjectFileEntry(projectPath, path.join(targetPath, entry.name), entry.name))
+  );
+  const currentPath = toRelativeProjectPath(projectPath, targetPath);
+  const parentPath = currentPath ? path.dirname(currentPath) : null;
+
+  return {
+    projectName: safeProjectName,
+    projectPath,
+    currentPath,
+    parentPath: parentPath === "." ? "" : parentPath,
+    entries: fileEntries.filter((entry): entry is ProjectFileEntry => entry !== null)
+  };
+}
+
 type CpuSnapshot = {
   idle: number;
   total: number;
@@ -218,22 +372,14 @@ async function getSystemSummary(projectsRoot: string): Promise<SystemSummary> {
 }
 
 export async function getDashboard(): Promise<DashboardResponse> {
-  const workspaceRoots = getWorkspaceRoots();
-  const projectGroups = await Promise.all(
-    workspaceRoots.map(async (root) => ({
-      root,
-      projects: await listProjects(root)
-    }))
-  );
-  const projects = projectGroups.flatMap((group) => group.projects);
-  const primaryRoot = workspaceRoots[0] ?? "/home/ubuntu/projects";
+  const projectsRoot = getProjectsRoot();
+  const projects = await listProjects(projectsRoot);
 
   return {
-    projectsRoot: primaryRoot,
-    workspaceRoots,
-    projectGroups,
+    projectsRoot,
     projects,
-    system: await getSystemSummary(primaryRoot),
+    system: await getSystemSummary(projectsRoot),
+    codeServerUrl: getCodeServerUrl(),
     updatedAt: new Date().toISOString()
   };
 }
