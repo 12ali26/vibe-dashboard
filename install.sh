@@ -138,7 +138,7 @@ create_env_file() {
 }
 
 start_stack() {
-  info "Building dashboard image."
+  info "Building VibeIDE Docker images."
   run_sudo docker compose build
 
   info "Starting bundled VibeIDE stack."

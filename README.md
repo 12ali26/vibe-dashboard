@@ -34,6 +34,19 @@ IDE:       http://SERVER_IP:8080
 
 The generated code-server password is printed during install and saved in `.env`.
 
+The bundled IDE image includes common developer tools and the Codex CLI:
+
+- `git`, `curl`, `wget`, `unzip`, and `build-essential`
+- Node.js LTS and `npm`
+- `python3`, `python3-pip`, and `python3-venv`
+- `codex`
+
+After opening the IDE, use the built-in terminal to sign in to Codex before running Codex tasks. You can confirm the CLI is installed with:
+
+```bash
+codex --version
+```
+
 ## Manual Bundled Install
 
 Use this if you cloned the repo yourself and want to start the bundled stack manually.
@@ -60,6 +73,12 @@ Open:
 ```text
 Dashboard: http://SERVER_IP:3000
 IDE:       http://SERVER_IP:8080
+```
+
+The bundled IDE includes the Codex CLI and basic developer tools. In the IDE terminal, sign in to Codex, then verify the CLI:
+
+```bash
+codex --version
 ```
 
 ## Existing code-server Mode
@@ -191,6 +210,7 @@ Confirm:
 - Dashboard opens at `http://SERVER_IP:3000`.
 - IDE opens at `http://SERVER_IP:8080`.
 - The generated code-server password works.
+- `codex --version` works in the IDE terminal.
 - A project created in the dashboard appears in code-server.
 - A file created in code-server appears in the dashboard.
 
@@ -207,7 +227,9 @@ For now:
 
 ## Docker Image Notes
 
-The current dashboard image is optimized enough for MVP use: it uses a slim Node base image, excludes local workspace/config data from the build context, and clears the npm cache after install.
+The dashboard image is optimized enough for MVP use: it uses a slim Node base image, excludes local workspace/config data from the build context, and clears the npm cache after install.
+
+Bundled IDE mode uses a custom code-server image from [docker/code-server/Dockerfile](docker/code-server/Dockerfile). It starts from the public code-server image and adds the basic tools needed on a fresh server, including Node.js LTS, npm, Python, build tools, and the Codex CLI. Dashboard-only mode does not use this image.
 
 A future production optimization is to compile the backend to plain JavaScript and remove the `tsx` runtime from the image. That would reduce image size further, but it is intentionally deferred to avoid destabilizing the current installer.
 

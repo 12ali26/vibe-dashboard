@@ -17,7 +17,9 @@ services:
   code-server:
     profiles:
       - bundled-ide
-    image: codercom/code-server:latest
+    build:
+      context: ./docker/code-server
+    image: vibeide-code-server:latest
     container_name: vibeide-code-server
     user: "0:0"
     environment:
