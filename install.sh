@@ -148,7 +148,8 @@ start_stack() {
 print_result() {
   detect_server_ip
 
-  printf '\nVibeIDE is starting.\n'
+  printf '\nVibeIDE bundled stack is starting.\n'
+  printf 'This installer is for fresh servers and starts both dashboard and code-server.\n'
   printf '\nAccess URLs:\n'
   printf '  Dashboard: http://%s:3000\n' "$SERVER_IP"
   printf '  IDE:       http://%s:8080\n' "$SERVER_IP"

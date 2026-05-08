@@ -2,14 +2,11 @@
 
 A self-hostable dashboard for managing a code-server workspace.
 
-VibeIDE supports two Docker modes:
-
-- Fresh install mode: run dashboard + bundled code-server.
-- Existing code-server mode: run only the dashboard and connect it to code-server already running on the host.
+The standard install path is the bundled stack: dashboard + code-server together. This is the mode intended for fresh servers and for anyone self-hosting VibeIDE.
 
 ## Fresh Install
 
-Use this on a fresh Ubuntu server.
+Use this on a fresh Ubuntu server. This installer always sets up the bundled stack.
 
 One-command install:
 
@@ -37,9 +34,37 @@ IDE:       http://SERVER_IP:8080
 
 The generated code-server password is printed during install and saved in `.env`.
 
+## Manual Bundled Install
+
+Use this if you cloned the repo yourself and want to start the bundled stack manually.
+
+```bash
+cp .env.bundled.example .env
+```
+
+Edit `.env` and set:
+
+```bash
+CODE_SERVER_PASSWORD=replace-this-password
+```
+
+Start the full stack:
+
+```bash
+docker compose build
+docker compose --profile bundled-ide up -d
+```
+
+Open:
+
+```text
+Dashboard: http://SERVER_IP:3000
+IDE:       http://SERVER_IP:8080
+```
+
 ## Existing code-server Mode
 
-Use this when code-server is already running on the server, for example on port `8080`.
+This is an advanced/manual mode for servers that already have code-server running. It is not what the installer uses.
 
 ```bash
 cp .env.example .env
@@ -69,45 +94,20 @@ Dashboard: http://SERVER_IP:3000
 IDE:       http://SERVER_IP:8080
 ```
 
-## Bundled IDE Mode
-
-Use this when you want Docker Compose to run both dashboard and code-server.
-
-Set these values in `.env`:
-
-```bash
-cp .env.bundled.example .env
-
-DASHBOARD_PORT=3000
-HOST_WORKSPACES_DIR=./workspaces
-WORKSPACES_DIR=/workspaces
-CODE_SERVER_PORT=8080
-BUNDLED_CODE_SERVER_PORT=8080
-CODE_SERVER_PASSWORD=replace-this-password
-CODE_SERVER_URL=
-```
-
-Start the full stack:
-
-```bash
-docker compose build
-docker compose --profile bundled-ide up -d
-```
-
 ## Start, Stop, Logs
+
+Bundled stack:
+
+```bash
+docker compose --profile bundled-ide up -d
+docker compose logs
+docker compose down
+```
 
 Existing code-server mode:
 
 ```bash
 docker compose up -d dashboard
-docker compose logs
-docker compose down
-```
-
-Bundled IDE mode:
-
-```bash
-docker compose --profile bundled-ide up -d
 docker compose logs
 docker compose down
 ```
@@ -132,7 +132,7 @@ Stop containers:
 docker compose down
 ```
 
-Remove generated local data for bundled mode:
+Remove generated local data for bundled installs:
 
 ```bash
 rm -rf workspaces config/code-server .env
@@ -148,7 +148,7 @@ Only run `docker system prune -a` if you are okay deleting unused Docker images 
 
 ## AWS Ports
 
-Fresh install / bundled IDE mode:
+Fresh install / bundled mode:
 
 - `3000/tcp` for the VibeIDE dashboard
 - `8080/tcp` for bundled code-server
