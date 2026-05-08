@@ -47,6 +47,44 @@ After opening the IDE, use the built-in terminal to sign in to Codex before runn
 codex --version
 ```
 
+## Update VibeIDE
+
+Use this on a server that already has VibeIDE installed and running. It updates the platform without reinstalling or deleting your local data.
+
+One-command update:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/12ali26/vibe-dashboard/main/update.sh | bash
+```
+
+The updater will:
+
+- Find your existing VibeIDE folder.
+- Verify Git, Docker, and Docker Compose are available.
+- Fail safely if Docker is not running or no VibeIDE Compose services are running.
+- Pull the latest changes from GitHub.
+- Preserve `.env`, `workspaces/`, and `config/`.
+- Rebuild Docker images.
+- Restart the same mode you are already using.
+
+The updater supports both bundled IDE mode and dashboard-only mode. If your install is not in `~/vibeide` and you are not running the command from the VibeIDE folder, set the install directory:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/12ali26/vibe-dashboard/main/update.sh | VIBEIDE_INSTALL_DIR=/path/to/vibeide bash
+```
+
+To check the updater version:
+
+```bash
+./update.sh --version
+```
+
+To print the VibeIDE app version from a cloned repo:
+
+```bash
+npm run version
+```
+
 ## Manual Bundled Install
 
 Use this if you cloned the repo yourself and want to start the bundled stack manually.
@@ -141,6 +179,12 @@ Restart:
 
 ```bash
 docker compose restart
+```
+
+Update:
+
+```bash
+./update.sh
 ```
 
 ## Uninstall / Cleanup
