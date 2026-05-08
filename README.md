@@ -160,6 +160,57 @@ Existing code-server mode:
 
 Keep SSH on `22/tcp` open only to your own IP if you need server access.
 
+## Port Binding
+
+By default, Docker publishes dashboard and bundled code-server on all network interfaces:
+
+```bash
+DASHBOARD_HOST=0.0.0.0
+BUNDLED_CODE_SERVER_HOST=0.0.0.0
+```
+
+For a more locked-down setup behind SSH tunnels or a reverse proxy, bind to localhost only:
+
+```bash
+DASHBOARD_HOST=127.0.0.1
+BUNDLED_CODE_SERVER_HOST=127.0.0.1
+```
+
+## Release Checklist
+
+Before sharing a release, verify the bundled install path on a fresh Ubuntu server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/12ali26/vibe-dashboard/main/install.sh | bash
+docker compose ps
+docker compose logs
+```
+
+Confirm:
+
+- Dashboard opens at `http://SERVER_IP:3000`.
+- IDE opens at `http://SERVER_IP:8080`.
+- The generated code-server password works.
+- A project created in the dashboard appears in code-server.
+- A file created in code-server appears in the dashboard.
+
+## Security Notes
+
+VibeIDE does not add dashboard authentication yet. Do not expose it broadly on the public internet.
+
+For now:
+
+- Set a strong `CODE_SERVER_PASSWORD`.
+- Restrict AWS/security-group inbound rules to your own IP when possible.
+- Do not commit `.env`, `workspaces/`, or `config/code-server/`.
+- Use a reverse proxy with HTTPS before treating this as a public service.
+
+## Docker Image Notes
+
+The current dashboard image is optimized enough for MVP use: it uses a slim Node base image, excludes local workspace/config data from the build context, and clears the npm cache after install.
+
+A future production optimization is to compile the backend to plain JavaScript and remove the `tsx` runtime from the image. That would reduce image size further, but it is intentionally deferred to avoid destabilizing the current installer.
+
 ## Features
 
 - List, create, and delete project folders in the configured workspace.
