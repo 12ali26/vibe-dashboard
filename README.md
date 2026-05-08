@@ -277,6 +277,14 @@ Bundled IDE mode uses a custom code-server image from [docker/code-server/Docker
 
 A future production optimization is to compile the backend to plain JavaScript and remove the `tsx` runtime from the image. That would reduce image size further, but it is intentionally deferred to avoid destabilizing the current installer.
 
+## Troubleshooting
+
+If Docker build fails during `apt-get update` with a message like `File has unexpected size` or `Mirror sync in progress`, wait a minute and retry the build without cache:
+
+```bash
+sudo docker compose build --no-cache
+```
+
 ## Features
 
 - List, create, and delete project folders in the configured workspace.
